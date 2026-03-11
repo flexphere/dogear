@@ -30,10 +30,10 @@ Set the **Config File Path** preference in Raycast to point to your `config.yaml
 
 ```yaml
 bookmarks:
-  - title: 'GitHub'
-    url: 'https://github.com'
-  - title: 'Google Cloud Console'
-    url: 'https://console.cloud.google.com'
+  - title: "GitHub"
+    url: "https://github.com"
+  - title: "Google Cloud Console"
+    url: "https://console.cloud.google.com"
 ```
 
 Each entry requires `title` and `url` fields. Comments (`#`) can be used to organize bookmarks by category.
