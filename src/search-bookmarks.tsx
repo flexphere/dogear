@@ -52,6 +52,10 @@ export default function Command() {
 
   return (
     <List searchBarPlaceholder="Search bookmarks..." throttle>
+      <List.EmptyView
+        title={error ? "Failed to load bookmarks" : "No bookmarks found"}
+        description={error || "Add bookmarks to your config.yaml file to get started."}
+      />
       {bookmarks.map((bookmark, index) => (
         <List.Item
           key={`${bookmark.title}-${index}`}
