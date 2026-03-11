@@ -1,6 +1,10 @@
 # <img src="assets/extension-icon.png" width="28" height="28" /> DOGEAR
 
+![DOGEAR screenshot](metadata/dogear-1.png)
+
 Raycast extension for fuzzy searching bookmarks from a YAML config file and opening them in the browser.
+DOGEAR uses the same `config.yaml` format as [fzf-bookmark-opener](https://github.com/flexphere/fzf-bookmark-opener).
+If you already have a config file at `~/.config/fzf-bookmark-opener/config.yaml`, you can point DOGEAR directly to it — no migration needed.
 
 ## Features
 
@@ -37,10 +41,6 @@ bookmarks:
 ```
 
 Each entry requires `title` and `url` fields. Comments (`#`) can be used to organize bookmarks by category.
-
-### fzf-bookmark-opener compatibility
-
-DOGEAR uses the same `config.yaml` format as [fzf-bookmark-opener](https://github.com/flexphere/fzf-bookmark-opener). If you already have a config file at `~/.config/fzf-bookmark-opener/config.yaml`, you can point DOGEAR directly to it — no migration needed.
 
 ## License
 
