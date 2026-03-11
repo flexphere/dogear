@@ -14,10 +14,6 @@ interface Config {
   bookmarks: Bookmark[];
 }
 
-interface Preferences {
-  configPath: string;
-}
-
 function expandPath(filePath: string): string {
   if (filePath.startsWith("~")) {
     return filePath.replace("~", os.homedir());
