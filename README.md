@@ -11,6 +11,10 @@ If you already have a config file at `~/.config/fzf-bookmark-opener/config.yaml`
 - Fuzzy search across all bookmarks
 - Favicon display for each bookmark
 - Open in browser or copy URL to clipboard
+- Edit bookmark title and URL directly from Raycast
+- Dynamic Placeholders in URLs (like Raycast QuickLinks)
+  - `{clipboard}` — automatically inserts clipboard contents into the URL
+  - `{argument name="..." default="..."}` — prompts for input before opening
 - YAML-based configuration
 
 ## Installation
@@ -41,6 +45,32 @@ bookmarks:
 ```
 
 Each entry requires `title` and `url` fields. Comments (`#`) can be used to organize bookmarks by category.
+
+### Dynamic Placeholders
+
+You can use Dynamic Placeholders in bookmark URLs, similar to [Raycast QuickLinks](https://manual.raycast.com/quicklinks).
+
+#### Clipboard
+
+Use `{clipboard}` to insert the current clipboard text into the URL:
+
+```yaml
+bookmarks:
+  - title: "Google Search (Clipboard)"
+    url: "https://google.com/search?q={clipboard}"
+```
+
+#### Argument
+
+Use `{argument name="..."}` to prompt for input when opening the bookmark:
+
+```yaml
+bookmarks:
+  - title: "Google Translate"
+    url: "https://translate.google.com/?sl={argument name="source" default="auto"}&tl={argument name="target"}&text={argument name="word"}&op=translate"
+```
+
+You can also combine `{clipboard}` and `{argument}` in the same URL.
 
 ## License
 

@@ -5,10 +5,12 @@ import { useState } from "react";
 import {
   Action,
   ActionPanel,
+  Clipboard,
   Form,
   getPreferenceValues,
   Icon,
   List,
+  open,
   showToast,
   Toast,
   useNavigation,
@@ -52,6 +54,58 @@ function loadBookmarks(configPath: string): { bookmarks: Bookmark[]; error?: str
     const message = e instanceof Error ? e.message : String(e);
     return { bookmarks: [], error: message };
   }
+}
+
+interface ArgumentPlaceholder {
+  name: string;
+  defaultValue?: string;
+}
+
+function parseArgumentPlaceholders(url: string): ArgumentPlaceholder[] {
+  const regex = /\{argument\s+([^}]*)\}/g;
+  const seen = new Set<string>();
+  const result: ArgumentPlaceholder[] = [];
+
+  for (const match of url.matchAll(regex)) {
+    const attrs = match[1];
+    const nameMatch = attrs.match(/name="([^"]+)"/);
+    if (!nameMatch) continue;
+
+    const name = nameMatch[1];
+    if (seen.has(name)) continue;
+    seen.add(name);
+
+    const defaultMatch = attrs.match(/default="([^"]+)"/);
+    result.push({ name, defaultValue: defaultMatch?.[1] });
+  }
+
+  return result;
+}
+
+function hasClipboardPlaceholder(url: string): boolean {
+  return url.includes("{clipboard}");
+}
+
+async function resolveUrl(url: string, argumentValues?: Record<string, string>): Promise<string> {
+  let resolved = url;
+
+  if (hasClipboardPlaceholder(resolved)) {
+    const clipboardText = (await Clipboard.readText()) ?? "";
+    resolved = resolved.replaceAll("{clipboard}", encodeURIComponent(clipboardText));
+  }
+
+  if (argumentValues) {
+    for (const [name, value] of Object.entries(argumentValues)) {
+      const regex = new RegExp(`\\{argument\\s+[^}]*name="${name}"[^}]*\\}`, "g");
+      resolved = resolved.replace(regex, encodeURIComponent(value));
+    }
+  }
+
+  return resolved;
+}
+
+function stripPlaceholders(url: string): string {
+  return url.replace(/\{clipboard\}/g, "").replace(/\{argument\s+[^}]*\}/g, "");
 }
 
 function saveBookmarkEdit(
@@ -132,6 +186,38 @@ function EditBookmarkForm(props: { bookmark: Bookmark; configPath: string; onEdi
   );
 }
 
+function ArgumentForm(props: { bookmark: Bookmark }) {
+  const { pop } = useNavigation();
+  const { bookmark } = props;
+  const placeholders = parseArgumentPlaceholders(bookmark.url);
+
+  async function handleSubmit(values: Record<string, string>) {
+    const empty = Object.entries(values).filter(([, v]) => !v.trim());
+    if (empty.length > 0) {
+      await showToast({ style: Toast.Style.Failure, title: "All fields are required" });
+      return;
+    }
+
+    const resolved = await resolveUrl(bookmark.url, values);
+    await open(resolved);
+    pop();
+  }
+
+  return (
+    <Form
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm title="Open in Browser" onSubmit={handleSubmit} />
+        </ActionPanel>
+      }
+    >
+      {placeholders.map((p) => (
+        <Form.TextField key={p.name} id={p.name} title={p.name} defaultValue={p.defaultValue ?? ""} />
+      ))}
+    </Form>
+  );
+}
+
 export default function Command() {
   const { configPath } = getPreferenceValues<Preferences>();
 
@@ -151,26 +237,50 @@ export default function Command() {
         title={error ? "Failed to load bookmarks" : "No bookmarks found"}
         description={error || "Add bookmarks to your config.yaml file to get started."}
       />
-      {bookmarks.map((bookmark, index) => (
-        <List.Item
-          key={`${bookmark.title}-${index}`}
-          title={bookmark.title}
-          subtitle={bookmark.url}
-          icon={getFavicon(bookmark.url)}
-          actions={
-            <ActionPanel>
-              <Action.OpenInBrowser url={bookmark.url} />
-              <Action.CopyToClipboard title="Copy URL" content={bookmark.url} />
-              <Action.Push
-                title="Edit Bookmark"
-                icon={Icon.Pencil}
-                shortcut={{ modifiers: ["cmd"], key: "e" }}
-                target={<EditBookmarkForm bookmark={bookmark} configPath={configPath} onEdit={reloadBookmarks} />}
-              />
-            </ActionPanel>
-          }
-        />
-      ))}
+      {bookmarks.map((bookmark, index) => {
+        const args = parseArgumentPlaceholders(bookmark.url);
+        const hasClipboard = hasClipboardPlaceholder(bookmark.url);
+        const hasDynamic = args.length > 0 || hasClipboard;
+
+        return (
+          <List.Item
+            key={`${bookmark.title}-${index}`}
+            title={bookmark.title}
+            subtitle={bookmark.url}
+            icon={getFavicon(hasDynamic ? stripPlaceholders(bookmark.url) : bookmark.url)}
+            accessories={hasDynamic ? [{ icon: Icon.Text, tooltip: "Dynamic Placeholder" }] : []}
+            actions={
+              <ActionPanel>
+                {args.length > 0 ? (
+                  <Action.Push
+                    title="Open with Arguments"
+                    icon={Icon.Globe}
+                    target={<ArgumentForm bookmark={bookmark} />}
+                  />
+                ) : hasClipboard ? (
+                  <Action
+                    title="Open with Clipboard"
+                    icon={Icon.Globe}
+                    onAction={async () => {
+                      const resolved = await resolveUrl(bookmark.url);
+                      await open(resolved);
+                    }}
+                  />
+                ) : (
+                  <Action.OpenInBrowser url={bookmark.url} />
+                )}
+                <Action.CopyToClipboard title="Copy URL" content={bookmark.url} />
+                <Action.Push
+                  title="Edit Bookmark"
+                  icon={Icon.Pencil}
+                  shortcut={{ modifiers: ["cmd"], key: "e" }}
+                  target={<EditBookmarkForm bookmark={bookmark} configPath={configPath} onEdit={reloadBookmarks} />}
+                />
+              </ActionPanel>
+            }
+          />
+        );
+      })}
     </List>
   );
 }
